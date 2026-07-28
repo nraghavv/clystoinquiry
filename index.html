@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Start an Inquiry — Clysto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./supabase-config.js"></script>
+<style>
+  :root{
+    --ink:#14181A;
+    --ink-soft:#5B6662;
+    --ink-faint:#8A9490;
+    --bg:#F9F8F3;
+    --primary:#00917D;
+    --primary-dark:#007A68;
+    --primary-wash:rgba(0,145,125,0.06);
+    --border:rgba(20,24,26,0.08);
+    --card:rgba(255,255,255,0.6);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+
+  #formSection{position:relative;padding:60px 24px;}
+  .blobs{position:absolute;inset:0;overflow:hidden;z-index:-1;pointer-events:none;}
+  .blob{position:absolute;border-radius:50%;background:var(--primary);filter:blur(70px);opacity:.14;}
+  .blob1{width:480px;height:480px;left:-160px;top:-120px;animation:float1 22s ease-in-out infinite;}
+  .blob2{width:420px;height:420px;right:-140px;top:220px;opacity:.10;animation:float2 26s ease-in-out infinite;}
+  @keyframes float1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(50px,40px) scale(1.08);}}
+  @keyframes float2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-40px,-30px) scale(0.94);}}
+
+  .card{
+    max-width:640px;margin:0 auto;
+    background:var(--card);backdrop-filter:blur(16px);
+    border:1px solid rgba(20,24,26,0.06);
+    border-radius:24px;
+    padding:36px 32px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.05);
+  }
+  @media (max-width:640px){.card{padding:24px 20px;}}
+
+  /* progress */
+  .progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .steps-track{display:flex;align-items:center;gap:0;}
+  .step-dot{
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;border:1px solid var(--border);background:rgba(255,255,255,0.5);color:var(--ink-faint);
+    transition:all .25s;flex-shrink:0;
+  }
+  .step-dot.current{border-color:var(--primary);color:var(--primary);background:#fff;}
+  .step-dot.done{border-color:var(--primary);background:var(--primary);color:#fff;}
+  .step-line{width:20px;height:1px;background:var(--border);margin:0 4px;transition:background .25s;}
+  .step-line.done{background:var(--primary);}
+  .pct{font-size:12px;font-weight:500;color:var(--ink-faint);}
+  .nav-arrows{display:flex;align-items:center;gap:6px;margin-left:12px;}
+  .arrow-btn{
+    width:26px;height:26px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--border);background:rgba(255,255,255,0.6);
+    color:var(--ink-soft);cursor:pointer;transition:all .2s;padding:0;
+  }
+  .arrow-btn:hover{border-color:rgba(0,145,125,0.4);background:#fff;color:var(--primary);}
+  .arrow-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .arrow-btn:disabled:hover{border-color:var(--border);background:rgba(255,255,255,0.6);color:var(--ink-soft);}
+  .path-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:22px;}
+  @media(min-width:560px){ .path-grid{grid-template-columns:repeat(3,1fr);} }
+  .path-card{
+    text-align:left;border:1px solid var(--border);border-radius:14px;
+    background:rgba(255,255,255,0.6);padding:20px 18px;cursor:pointer;
+    display:flex;flex-direction:column;gap:6px;transition:all .2s;
+  }
+  .path-card:hover{border-color:rgba(0,145,125,0.4);background:#fff;transform:translateY(-1px);}
+  .path-title{font-size:15px;font-weight:600;color:var(--ink);}
+  .path-desc{font-size:13px;color:var(--ink-soft);line-height:1.5;}
+  .bar-track{height:4px;width:100%;background:rgba(0,0,0,0.06);border-radius:99px;overflow:hidden;margin-top:12px;}
+  .bar-fill{height:100%;background:var(--primary);border-radius:99px;transition:width .4s ease;}
+  .step-caption{margin:8px 0 0;font-size:12px;color:var(--ink-faint);}
+
+  /* step content */
+  .step-panel{display:none;animation:stepIn .3s ease;}
+  .step-panel.active{display:block;}
+  @keyframes stepIn{from{opacity:0;transform:translateX(14px);}to{opacity:1;transform:translateX(0);}}
+
+  .s-title{font-size:1.3rem;font-weight:500;letter-spacing:-0.01em;margin:0 0 4px;}
+  .s-sub{font-size:13.5px;color:var(--ink-faint);margin:0 0 26px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:560px){.grid2{grid-template-columns:1fr;}}
+  .field label{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;font-weight:500;margin-bottom:7px;
+  }
+  .req{color:var(--primary);margin-left:2px;}
+  .opt-hint{font-size:11px;color:var(--ink-faint);font-weight:400;}
+  input[type=text],input[type=email],input[type=tel],input[type=url],textarea{
+    width:100%;font-family:inherit;font-size:14px;color:var(--ink);
+    background:rgba(255,255,255,0.7);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;outline:none;
+    transition:border-color .2s,box-shadow .2s,background .2s;
+  }
+  input:focus,textarea:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(0,145,125,0.15);}
+  input.error,textarea.error{border-color:#f87171;}
+  .err-msg{font-size:12px;color:#ef4444;margin-top:5px;}
+  textarea{resize:vertical;min-height:80px;}
+
+  .vspace > * + *{margin-top:20px;}
+
+  /* pill select */
+  .pills{display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{
+    border:1px solid var(--border);background:rgba(255,255,255,0.6);
+    color:var(--ink-soft);font-size:13px;font-weight:500;font-family:inherit;
+    padding:9px 16px;border-radius:999px;cursor:pointer;transition:all .2s;
+  }
+  .pill:hover{border-color:rgba(0,145,125,0.4);background:#fff;}
+  .pill.active{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 4px 10px rgba(0,145,125,0.2);}
+
+  /* checkbox cards (services) */
+  .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (min-width:560px){.svc-grid{grid-template-columns:1fr 1fr 1fr;}}
+  .svc-card{
+    display:flex;align-items:flex-start;gap:8px;text-align:left;
+    border:1px solid var(--border);background:rgba(255,255,255,0.6);
+    border-radius:12px;padding:12px 13px;font-size:13px;line-height:1.35;color:var(--ink-soft);
+    cursor:pointer;font-family:inherit;transition:all .2s;
+  }
+  .svc-card:hover{border-color:rgba(0,145,125,0.35);background:#fff;}
+  .svc-card.active{border-color:var(--primary);background:var(--primary-wash);color:#0E5A4C;}
+  .chk{
+    width:16px;height:16px;border-radius:5px;border:1px solid rgba(0,0,0,0.2);
+    background:#fff;flex-shrink:0;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;transition:all .2s;
+  }
+  .svc-card.active .chk{background:var(--primary);border-color:var(--primary);}
+  .chk svg{display:none;width:10px;height:10px;color:#fff;}
+  .svc-card.active .chk svg{display:block;}
+
+  /* radio rows (budget) */
+  .radio-rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:560px){.radio-rows{grid-template-columns:1fr;}}
+  .radio-row{
+    display:flex;align-items:center;gap:10px;text-align:left;
+    border:1px solid var(--border);background:rgba(255,255,255,0.6);
+    border-radius:12px;padding:13px 15px;font-size:14px;color:var(--ink-soft);
+    cursor:pointer;font-family:inherit;transition:all .2s;
+  }
+  .radio-row:hover{border-color:rgba(0,145,125,0.3);background:#fff;}
+  .radio-row.active{border-color:var(--primary);background:var(--primary-wash);color:#0E5A4C;}
+  .rdot{width:15px;height:15px;border-radius:50%;border:2px solid rgba(0,0,0,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .radio-row.active .rdot{border-color:var(--primary);}
+  .rdot-inner{width:7px;height:7px;border-radius:50%;background:var(--primary);display:none;}
+  .radio-row.active .rdot-inner{display:block;}
+
+  /* nav buttons */
+  .form-nav{display:flex;align-items:center;justify-content:space-between;margin-top:34px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--primary);color:#fff;border:none;cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:500;
+    padding:13px 26px;border-radius:999px;
+    box-shadow:0 8px 20px rgba(0,145,125,0.25);
+    transition:background .2s,transform .15s,box-shadow .2s;
+    text-decoration:none;
+  }
+  .btn:hover{background:var(--primary-dark);box-shadow:0 10px 24px rgba(0,145,125,0.3);}
+  .btn:active{transform:scale(0.98);}
+  .btn:disabled{opacity:.65;cursor:not-allowed;}
+  .btn-ghost{background:rgba(255,255,255,0.7);color:var(--ink);border:1px solid var(--border);box-shadow:none;}
+  .btn-ghost:hover{background:#fff;}
+  .btn-back{
+    background:none;border:none;color:var(--ink-soft);font-family:inherit;
+    font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;
+    padding:10px 14px;border-radius:999px;transition:background .2s,color .2s;
+  }
+  .btn-back:hover{background:rgba(0,0,0,0.04);}
+  .btn-back:disabled{color:#C3CAC7;cursor:not-allowed;}
+  .btn-back:disabled:hover{background:none;}
+  .submit-err{text-align:center;font-size:12px;color:#ef4444;margin-top:12px;}
+
+  .spinner{
+    width:14px;height:14px;border-radius:50%;
+    border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* success */
+  #successPanel{display:none;text-align:center;padding:24px 4px;}
+  .check-circle{
+    width:64px;height:64px;border-radius:50%;background:var(--primary);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 20px;
+    animation:pop .4s cubic-bezier(.34,1.56,.64,1) .1s both;
+  }
+  @keyframes pop{from{transform:scale(0);}to{transform:scale(1);}}
+  #successPanel h3{font-size:1.4rem;font-weight:500;letter-spacing:-0.01em;margin:0;}
+  #successPanel p{max-width:340px;margin:10px auto 0;color:var(--ink-soft);font-size:14px;line-height:1.6;}
+  .success-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:26px;}
+</style>
+</head>
+<body>
+
+<section id="formSection">
+  <div class="blobs"><div class="blob blob1"></div><div class="blob blob2"></div></div>
+  <div class="card">
+
+    <!-- path selection -->
+    <div id="pathSelect">
+      <h2 class="s-title">how can we help?</h2>
+      <p class="s-sub">Pick whichever fits best — we&rsquo;ll tailor the next few questions.</p>
+      <div class="path-grid">
+        <button type="button" class="path-card" data-flow="grow">
+          <span class="path-title">Grow Your Brand</span>
+          <span class="path-desc">Tell us about your project so we can scope the right services.</span>
+        </button>
+        <button type="button" class="path-card" data-flow="partnership">
+          <span class="path-title">Partnership</span>
+          <span class="path-desc">Explore collaborating or partnering with Clysto.</span>
+        </button>
+        <button type="button" class="path-card" data-flow="general">
+          <span class="path-title">General</span>
+          <span class="path-desc">Have a quick question? Ask the team directly.</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- step flow: grow / partnership -->
+    <div id="stepFlow" style="display:none;">
+
+    <!-- progress -->
+    <div id="progressWrap">
+      <div class="progress-top">
+        <div class="steps-track" id="stepsTrack"></div>
+        <div style="display:flex;align-items:center;">
+          <span class="pct" id="pctLabel">25%</span>
+          <div class="nav-arrows">
+            <button type="button" class="arrow-btn" id="prevArrowBtn" title="Previous step" aria-label="Previous step">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button type="button" class="arrow-btn" id="nextArrowBtn" title="Next step" aria-label="Next step">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barFill" style="width:25%"></div></div>
+      <p class="step-caption" id="stepCaption">step 1 of 4 — company</p>
+    </div>
+
+    <form id="inquiryForm" novalidate>
+
+      <!-- STEP 1: Company -->
+      <div class="step-panel active" data-step="0">
+        <h2 class="s-title">let&rsquo;s start with the basics.</h2>
+        <p class="s-sub">Who are you, and where can we reach you?</p>
+        <div class="grid2">
+          <div class="field">
+            <label>Full Name<span class="req">*</span></label>
+            <input type="text" id="fullName" placeholder="Jordan Smith">
+            <div class="err-msg" id="err-fullName"></div>
+          </div>
+          <div class="field">
+            <label>Company Name<span class="req">*</span></label>
+            <input type="text" id="companyName" placeholder="Acme Inc.">
+            <div class="err-msg" id="err-companyName"></div>
+          </div>
+          <div class="field">
+            <label>Email Address<span class="req">*</span></label>
+            <input type="email" id="email" placeholder="jordan@acme.com">
+            <div class="err-msg" id="err-email"></div>
+          </div>
+          <div class="field">
+            <label>Phone Number <span class="opt-hint">optional</span></label>
+            <input type="tel" id="phone" placeholder="+1 (555) 000-0000">
+          </div>
+          <div class="field">
+            <label>Website URL <span class="opt-hint">optional</span></label>
+            <input type="text" id="websiteUrl" placeholder="acme.com">
+            <div class="err-msg" id="err-websiteUrl"></div>
+          </div>
+          <div class="field">
+            <label>LinkedIn Profile <span class="opt-hint">optional</span></label>
+            <input type="text" id="linkedinUrl" placeholder="linkedin.com/in/jordan">
+            <div class="err-msg" id="err-linkedinUrl"></div>
+          </div>
+          <div class="field">
+            <label>How did you hear about us? <span class="opt-hint">optional</span></label>
+            <input type="text" id="howHeard" placeholder="Referral, LinkedIn, Google…">
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Business -->
+      <div class="step-panel" data-step="1">
+        <h2 class="s-title">tell us about the business.</h2>
+        <p class="s-sub">This helps us calibrate strategy to your stage.</p>
+        <div class="vspace">
+          <div class="field">
+            <label>Industry <span class="opt-hint">optional</span></label>
+            <input type="text" id="industry" placeholder="e.g. D2C skincare, B2B SaaS, fintech">
+          </div>
+          <div class="field">
+            <label>Company Size <span class="opt-hint">optional</span></label>
+            <div class="pills" id="companySizePills"></div>
+          </div>
+          <div class="field">
+            <label>Monthly Revenue <span class="opt-hint">optional</span></label>
+            <div class="pills" id="revenuePills"></div>
+          </div>
+          <div class="field" id="partnerWhyField" style="display:none;">
+            <label>Why do you want to partner with Clysto? <span class="opt-hint">optional</span></label>
+            <textarea id="partnerWhy" placeholder="What kind of partnership are you thinking of?"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Services -->
+      <div class="step-panel" data-step="2">
+        <h2 class="s-title">what do you need help with?</h2>
+        <p class="s-sub">Select everything relevant — we&rsquo;ll scope from there.</p>
+        <div class="svc-grid" id="serviceGrid"></div>
+      </div>
+
+      <!-- STEP 4: Project -->
+      <div class="step-panel" data-step="3">
+        <h2 class="s-title">give us the full picture.</h2>
+        <p class="s-sub">The more context, the sharper our first response.</p>
+        <div class="vspace">
+          <div class="field">
+            <label>Describe your business and project <span class="opt-hint">optional</span></label>
+            <textarea id="businessDescription" placeholder="What do you do, and what are you looking to build or fix?"></textarea>
+          </div>
+          <div class="field">
+            <label>What are the goals you&rsquo;re looking to achieve with Clysto? <span class="opt-hint">optional</span></label>
+            <textarea id="projectDescription" placeholder="What are you hoping to accomplish?"></textarea>
+          </div>
+          <div class="field">
+            <label>Timeline <span class="opt-hint">optional</span></label>
+            <div class="pills" id="timelinePills"></div>
+          </div>
+          <div class="field">
+            <label>Budget <span class="opt-hint">optional</span></label>
+            <div class="radio-rows" id="budgetRows"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <button type="button" class="btn-back" id="backBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          <span id="backLabel">Back</span>
+        </button>
+        <button type="button" class="btn" id="nextBtn">
+          Continue
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <button type="submit" class="btn" id="submitBtn" style="display:none;">
+          <span id="submitLabel">Submit Inquiry</span>
+          <svg id="submitArrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <p class="submit-err" id="submitErr" style="display:none;">Something went wrong submitting your inquiry. Please try again.</p>
+    </form>
+
+    </div><!-- /stepFlow -->
+
+    <!-- general panel -->
+    <div id="generalPanel" style="display:none;">
+      <h2 class="s-title">have a question?</h2>
+      <p class="s-sub">Feel free to ask team Clysto — we&rsquo;ll get back to you directly.</p>
+      <form id="generalForm" novalidate>
+        <div class="grid2">
+          <div class="field">
+            <label>Full Name<span class="req">*</span></label>
+            <input type="text" id="genFullName" placeholder="Jordan Smith">
+            <div class="err-msg" id="err-genFullName"></div>
+          </div>
+          <div class="field">
+            <label>Email Address<span class="req">*</span></label>
+            <input type="email" id="genEmail" placeholder="jordan@acme.com">
+            <div class="err-msg" id="err-genEmail"></div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px;">
+          <label>Have a question? Feel free to ask team Clysto <span class="opt-hint">optional</span></label>
+          <textarea id="generalQuestion" placeholder="What's on your mind?"></textarea>
+        </div>
+        <div class="form-nav">
+          <button type="button" class="btn-back" id="generalBackBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+            Change Path
+          </button>
+          <button type="submit" class="btn" id="generalSubmitBtn">
+            <span id="generalSubmitLabel">Send Question</span>
+            <svg id="generalSubmitArrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <p class="submit-err" id="generalSubmitErr" style="display:none;">Something went wrong sending your question. Please try again.</p>
+      </form>
+    </div>
+
+    <!-- success screen -->
+    <div id="successPanel">
+      <div class="check-circle">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h3>you have submitted successfully.</h3>
+      <p>We will get back to you within 24 hours.</p>
+      <div class="success-actions">
+        <a class="btn" href="https://tally.so/r/NpPBBG" target="_blank" rel="noreferrer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+          Book Discovery Call
+        </a>
+        <a class="btn btn-ghost" href="https://clysto.net">Back to clysto.net</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+/* ============================================================
+   Option lists
+   ============================================================ */
+const COMPANY_SIZES = ["Solo Founder","2-10 Employees","11-50 Employees","51-200 Employees","200+"];
+const REVENUE_RANGES = ["Pre-Revenue","Under $10k","$10k-$50k","$50k-$250k","$250k+"];
+const SERVICES = ["Branding & Identity","Website Design","Website Development","SEO","Social Media Marketing","Performance Marketing","Content Creation","Marketing Automation","AI Automations","Lead Generation","CRM Setup","UI/UX Design","Product Launch Strategy","Growth Consulting"];
+const TIMELINES = ["ASAP","Within 1 Month","1-3 Months","Flexible"];
+const BUDGETS = ["Under $1,000","$1,000-$5,000","$5,000-$15,000","$15,000-$50,000","$50,000+"];
+
+let STEP_LABELS = [];
+let TOTAL_STEPS = 0;
+const FLOW_STEPS = {
+  grow: ["company","business","services","project"],
+  partnership: ["company","business"]
+};
+const STORAGE_KEY = "clysto-inquiry-draft-v1";
+
+/* ============================================================
+   State
+   ============================================================ */
+let flow = null;
+let step = 0;
+let state = {
+  fullName:"", companyName:"", email:"", phone:"", websiteUrl:"", linkedinUrl:"", howHeard:"",
+  industry:"", companySize:"", monthlyRevenue:"",
+  services:[],
+  businessDescription:"", projectDescription:"", timeline:"",
+  budget:"", partnerWhy:"",
+  genFullName:"", genEmail:"", generalQuestion:""
+};
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function isValidUrl(v){
+  if(!v) return true;
+  try{ new URL(v.startsWith("http") ? v : "https://" + v); return true; }
+  catch(e){ return false; }
+}
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+/* ============================================================
+   Supabase Configuration
+   ============================================================ */
+const supabaseClient = window.SUPABASE_CONFIG
+  ? supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey)
+  : null;
+
+/* ============================================================
+   Build dynamic option UI
+   ============================================================ */
+function buildPills(containerId, options, stateKey){
+  const c = document.getElementById(containerId);
+  c.innerHTML = "";
+  options.forEach(opt=>{
+    const b = el("button", "pill", opt);
+    b.type = "button";
+    if(state[stateKey] === opt) b.classList.add("active");
+    b.addEventListener("click", ()=>{
+      state[stateKey] = opt;
+      buildPills(containerId, options, stateKey);
+      saveDraft();
+    });
+    c.appendChild(b);
+  });
+}
+
+function buildServiceGrid(){
+  const c = document.getElementById("serviceGrid");
+  c.innerHTML = "";
+  SERVICES.forEach(svc=>{
+    const active = state.services.includes(svc);
+    const b = el("button", "svc-card" + (active ? " active" : ""));
+    b.type = "button";
+    b.innerHTML = '<span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span>' + svc + '</span>';
+    b.addEventListener("click", ()=>{
+      const i = state.services.indexOf(svc);
+      if(i > -1) state.services.splice(i,1); else state.services.push(svc);
+      buildServiceGrid();
+      saveDraft();
+    });
+    c.appendChild(b);
+  });
+}
+
+function buildBudgetRows(){
+  const c = document.getElementById("budgetRows");
+  c.innerHTML = "";
+  BUDGETS.forEach(opt=>{
+    const active = state.budget === opt;
+    const b = el("button", "radio-row" + (active ? " active" : ""));
+    b.type = "button";
+    b.innerHTML = '<span class="rdot"><span class="rdot-inner"></span></span><span>' + opt + '</span>';
+    b.addEventListener("click", ()=>{
+      state.budget = opt;
+      buildBudgetRows();
+      saveDraft();
+    });
+    c.appendChild(b);
+  });
+}
+
+/* ============================================================
+   Progress bar / step tracker
+   ============================================================ */
+function renderProgress(){
+  if(!TOTAL_STEPS) return;
+  const track = document.getElementById("stepsTrack");
+  track.innerHTML = "";
+  STEP_LABELS.forEach((label, i)=>{
+    const dot = el("div", "step-dot" + (i < step ? " done" : i === step ? " current" : ""));
+    dot.innerHTML = i < step
+      ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>'
+      : (i+1);
+    track.appendChild(dot);
+    if(i < STEP_LABELS.length - 1){
+      track.appendChild(el("div", "step-line" + (i < step ? " done" : "")));
+    }
+  });
+  const pct = Math.round(((step+1) / TOTAL_STEPS) * 100);
+  document.getElementById("pctLabel").textContent = pct + "%";
+  document.getElementById("barFill").style.width = pct + "%";
+  document.getElementById("stepCaption").textContent = "step " + (step+1) + " of " + TOTAL_STEPS + " — " + STEP_LABELS[step];
+}
+
+function renderStepPanels(){
+  if(!TOTAL_STEPS) return;
+  document.querySelectorAll(".step-panel").forEach(p=>{
+    p.classList.toggle("active", Number(p.dataset.step) === step);
+  });
+  document.getElementById("backLabel").textContent = step === 0 ? "Change Path" : "Back";
+  document.getElementById("nextBtn").style.display = step === TOTAL_STEPS - 1 ? "none" : "inline-flex";
+  document.getElementById("submitBtn").style.display = step === TOTAL_STEPS - 1 ? "inline-flex" : "none";
+  document.getElementById("prevArrowBtn").disabled = false;
+  document.getElementById("nextArrowBtn").disabled = step === TOTAL_STEPS - 1;
+}
+
+/* ============================================================
+   Validation (step 1 required fields only, per spec)
+   ============================================================ */
+function clearErrors(){
+  ["fullName","companyName","email","websiteUrl","linkedinUrl"].forEach(k=>{
+    const msg = document.getElementById("err-" + k);
+    if(msg) msg.textContent = "";
+    const input = document.getElementById(k);
+    if(input) input.classList.remove("error");
+  });
+}
+function setError(key, msg){
+  document.getElementById("err-" + key).textContent = msg;
+  document.getElementById(key).classList.add("error");
+}
+function validateStep(s){
+  clearErrors();
+  let ok = true;
+  if(s === 0){
+    if(!state.fullName.trim()){ setError("fullName","Full name is required."); ok = false; }
+    if(!state.companyName.trim()){ setError("companyName","Company name is required."); ok = false; }
+    if(!state.email.trim()){ setError("email","Email is required."); ok = false; }
+    else if(!isValidEmail(state.email)){ setError("email","Enter a valid email address."); ok = false; }
+    if(state.websiteUrl && !isValidUrl(state.websiteUrl)){ setError("websiteUrl","Enter a valid URL."); ok = false; }
+    if(state.linkedinUrl && !isValidUrl(state.linkedinUrl)){ setError("linkedinUrl","Enter a valid URL."); ok = false; }
+  }
+  return ok;
+}
+
+function clearGeneralErrors(){
+  ["genFullName","genEmail"].forEach(k=>{
+    const msg = document.getElementById("err-" + k);
+    if(msg) msg.textContent = "";
+    const input = document.getElementById(k);
+    if(input) input.classList.remove("error");
+  });
+}
+function validateGeneral(){
+  clearGeneralErrors();
+  let ok = true;
+  if(!state.genFullName.trim()){ setError("genFullName","Full name is required."); ok = false; }
+  if(!state.genEmail.trim()){ setError("genEmail","Email is required."); ok = false; }
+  else if(!isValidEmail(state.genEmail)){ setError("genEmail","Enter a valid email address."); ok = false; }
+  return ok;
+}
+
+/* ============================================================
+   Autosave to localStorage
+   ============================================================ */
+function saveDraft(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, step, flow })); }catch(e){}
+}
+function loadDraft(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(parsed.state) state = Object.assign(state, parsed.state);
+    if(typeof parsed.step === "number") step = parsed.step;
+    if(parsed.flow) flow = parsed.flow;
+  }catch(e){}
+}
+
+/* ============================================================
+   Bind plain text inputs
+   ============================================================ */
+const TEXT_FIELDS = ["fullName","companyName","email","phone","websiteUrl","linkedinUrl","howHeard",
+  "industry","businessDescription","projectDescription","partnerWhy",
+  "genFullName","genEmail","generalQuestion"];
+
+function bindTextFields(){
+  TEXT_FIELDS.forEach(id=>{
+    const input = document.getElementById(id);
+    if(!input) return;
+    input.value = state[id] || "";
+    input.addEventListener("input", ()=>{
+      state[id] = input.value;
+      saveDraft();
+    });
+  });
+}
+
+/* ============================================================
+   Navigation
+   ============================================================ */
+function goToStep(target){
+  step = target;
+  renderProgress();
+  renderStepPanels();
+  document.getElementById("formSection").scrollIntoView({behavior:"smooth", block:"start"});
+  saveDraft();
+}
+
+function applyFlow(f, resetStep){
+  flow = f;
+  STEP_LABELS = FLOW_STEPS[f];
+  TOTAL_STEPS = STEP_LABELS.length;
+  step = resetStep ? 0 : Math.min(step, TOTAL_STEPS - 1);
+  document.getElementById("partnerWhyField").style.display = f === "partnership" ? "block" : "none";
+  document.getElementById("pathSelect").style.display = "none";
+  document.getElementById("generalPanel").style.display = "none";
+  document.getElementById("stepFlow").style.display = "block";
+  renderProgress();
+  renderStepPanels();
+  document.getElementById("formSection").scrollIntoView({behavior:"smooth", block:"start"});
+  saveDraft();
+}
+
+function showGeneral(){
+  flow = "general";
+  document.getElementById("pathSelect").style.display = "none";
+  document.getElementById("stepFlow").style.display = "none";
+  document.getElementById("generalPanel").style.display = "block";
+  document.getElementById("formSection").scrollIntoView({behavior:"smooth", block:"start"});
+  saveDraft();
+}
+
+function backToPathSelect(){
+  flow = null;
+  document.getElementById("pathSelect").style.display = "block";
+  document.getElementById("stepFlow").style.display = "none";
+  document.getElementById("generalPanel").style.display = "none";
+  document.getElementById("formSection").scrollIntoView({behavior:"smooth", block:"start"});
+  saveDraft();
+}
+
+document.querySelectorAll(".path-card").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const f = btn.dataset.flow;
+    if(f === "general") showGeneral(); else applyFlow(f, true);
+  });
+});
+
+document.getElementById("nextBtn").addEventListener("click", ()=>{
+  if(!validateStep(step)) return;
+  goToStep(Math.min(step+1, TOTAL_STEPS-1));
+});
+document.getElementById("backBtn").addEventListener("click", ()=>{
+  if(step === 0){ backToPathSelect(); return; }
+  goToStep(step-1);
+});
+document.getElementById("nextArrowBtn").addEventListener("click", ()=>{
+  if(!validateStep(step)) return;
+  goToStep(Math.min(step+1, TOTAL_STEPS-1));
+});
+document.getElementById("prevArrowBtn").addEventListener("click", ()=>{
+  if(step === 0){ backToPathSelect(); return; }
+  goToStep(step-1);
+});
+document.getElementById("generalBackBtn").addEventListener("click", backToPathSelect);
+
+/* ============================================================
+   Submit — Multi-step form (Grow/Partnership) via Supabase
+   ============================================================ */
+document.getElementById("inquiryForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if(!validateStep(0)) { goToStep(0); return; }
+
+  const submitBtn = document.getElementById("submitBtn");
+  const submitLabel = document.getElementById("submitLabel");
+  const submitArrow = document.getElementById("submitArrow");
+  const submitErr = document.getElementById("submitErr");
+
+  submitBtn.disabled = true;
+  submitArrow.style.display = "none";
+  submitLabel.textContent = "Submitting…";
+  const spinner = el("span", "spinner");
+  submitBtn.insertBefore(spinner, submitLabel);
+  submitErr.style.display = "none";
+
+  const payload = {
+    inquiry_type: flow,
+    full_name: state.fullName,
+    company_name: state.companyName,
+    email: state.email,
+    phone: state.phone || null,
+    website_url: state.websiteUrl || null,
+    linkedin_url: state.linkedinUrl || null,
+    how_heard: state.howHeard || null,
+    industry: state.industry || null,
+    company_size: state.companySize || null,
+    monthly_revenue: state.monthlyRevenue || null,
+    services: state.services.length > 0 ? state.services.join(", ") : null,
+    business_description: state.businessDescription || null,
+    project_description: state.projectDescription || null,
+    timeline: state.timeline || null,
+    budget: state.budget || null,
+    partner_why: state.partnerWhy || null
+  };
+
+  try{
+    if(!supabaseClient) throw new Error("Supabase is not configured (missing supabase-config.js)");
+    const { error } = await supabaseClient.from("inquiries").insert([payload]);
+    if(error) throw error;
+
+    document.getElementById("stepFlow").style.display = "none";
+    document.getElementById("successPanel").style.display = "block";
+    localStorage.removeItem(STORAGE_KEY);
+  }catch(err){
+    console.error("[inquiry submit]", err);
+    submitErr.style.display = "block";
+    submitBtn.disabled = false;
+    spinner.remove();
+    submitArrow.style.display = "inline";
+    submitLabel.textContent = "Submit Inquiry";
+  }
+});
+
+/* ============================================================
+   Submit — General panel via Supabase
+   ============================================================ */
+document.getElementById("generalForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if(!validateGeneral()) return;
+
+  const submitBtn = document.getElementById("generalSubmitBtn");
+  const submitLabel = document.getElementById("generalSubmitLabel");
+  const submitArrow = document.getElementById("generalSubmitArrow");
+  const submitErr = document.getElementById("generalSubmitErr");
+
+  submitBtn.disabled = true;
+  submitArrow.style.display = "none";
+  submitLabel.textContent = "Sending…";
+  const spinner = el("span", "spinner");
+  submitBtn.insertBefore(spinner, submitLabel);
+  submitErr.style.display = "none";
+
+  const payload = {
+    inquiry_type: "general",
+    full_name: state.genFullName,
+    email: state.genEmail,
+    general_question: state.generalQuestion || null
+  };
+
+  try{
+    if(!supabaseClient) throw new Error("Supabase is not configured (missing supabase-config.js)");
+    const { error } = await supabaseClient.from("inquiries").insert([payload]);
+    if(error) throw error;
+
+    document.getElementById("generalPanel").style.display = "none";
+    document.getElementById("successPanel").style.display = "block";
+    localStorage.removeItem(STORAGE_KEY);
+  }catch(err){
+    console.error("[general submit]", err);
+    submitErr.style.display = "block";
+    submitBtn.disabled = false;
+    spinner.remove();
+    submitArrow.style.display = "inline";
+    submitLabel.textContent = "Send Question";
+  }
+});
+
+/* ============================================================
+   Init
+   ============================================================ */
+loadDraft();
+buildPills("companySizePills", COMPANY_SIZES, "companySize");
+buildPills("revenuePills", REVENUE_RANGES, "monthlyRevenue");
+buildPills("timelinePills", TIMELINES, "timeline");
+buildServiceGrid();
+buildBudgetRows();
+bindTextFields();
+if(flow === "general"){
+  showGeneral();
+} else if(flow && FLOW_STEPS[flow]){
+  applyFlow(flow, false);
+}
+</script>
+</body>
+</html>
