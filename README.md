@@ -1,88 +1,71 @@
-# Clysto Inquiry System
+# Clysto — Student Founders Program
 
-A static (no build step) inquiry form + admin dashboard, backed by Supabase.
+A static (no build step) application form + admin dashboard, backed by
+Supabase. Built as a completely separate project from the Clysto
+inquiries site — deploy it to its own URL/hosting independently.
 
-## What this is
+## Files
 
-- `index.html` — your existing inquiry form, unchanged visually. The submit
-  handlers now write directly to Supabase instead of FormSubmit.
-- `admin/index.html` — a new admin dashboard: login, sidebar (Dashboard /
-  Grow With Us / Partnerships / General), summary cards, searchable +
-  filterable submission lists, a detail drawer, mark-as-read, delete,
-  and pagination.
-- `supabase-config.js` — the only file you need to edit. Holds your
-  Supabase project URL and anon key, used by both the form and the
-  dashboard.
-- `migrations/001_create_inquiries_table.sql` — the database schema (this
-  was already correct from the earlier session and is used as-is).
-
-There is no Next.js, no build step, no `node_modules`. Every file here can
-be opened directly or hosted on any static file host.
+- `index.html` — the public 6-step application form (autosaves progress
+  to localStorage as applicants fill it in).
+- `admin/index.html` — the admin dashboard: login, sidebar with a full
+  pipeline (Pending / Shortlisted / Interview / Accepted / Rejected /
+  Archived), stat cards, searchable + filterable applications table,
+  quick actions (Shortlist / Accept / Reject) right in the row, a full
+  detail drawer with all submitted fields, editable internal notes +
+  reviewer, and delete with confirmation.
+- `supabase-config.js` — the file you edit with your Supabase project
+  URL + anon key.
+- `migrations/002_create_student_founders_table.sql` — schema, indexes,
+  RLS policies, and a stats view. Safe to re-run — it drops any
+  existing version of this table first, then rebuilds clean.
+- `vercel.json` — routes `/admin` correctly on Vercel's static hosting
+  (this was a real issue on the Clysto inquiries deploy — included
+  here from the start so it isn't hit again).
 
 ## Setup
 
-### 1. Create a Supabase project
-Go to https://supabase.com → New Project. Save your database password.
+### 1. Supabase
+You can reuse your **existing Clysto Supabase project** (just adds a
+new table alongside `inquiries`), or spin up a fresh project — either
+works.
 
-### 2. Run the migration
-Supabase Dashboard → **SQL Editor** → paste the full contents of
-`migrations/001_create_inquiries_table.sql` → Run. This creates the
-`inquiries` table, indexes, and Row Level Security policies:
-- Anyone can `INSERT` (public form submissions)
-- Only authenticated users can `SELECT` / `UPDATE` / `DELETE` (admin dashboard)
+1. SQL Editor → paste the full contents of
+   `migrations/002_create_student_founders_table.sql` → Run.
+2. Authentication → Users → **Create user** with the email/password
+   you'll use to log into this dashboard (can be the same admin login
+   as Clysto, or a different one — your call).
+3. Settings → API Keys → copy your **Project URL** and **anon public**
+   key into `supabase-config.js`.
 
-### 3. Enable email auth + create your admin login
-Authentication → Providers → make sure **Email** is on.
-Authentication → Users → **Create user** → enter the email/password you'll
-use to log into `/admin`.
-
-### 4. Fill in `supabase-config.js`
-Settings → API → copy your **Project URL** and **anon public** key into:
-
-```js
-window.SUPABASE_CONFIG = {
-  url: "https://your-project-ref.supabase.co",
-  anonKey: "eyJhbGc..."
-};
-```
-
-The anon key is safe to ship in client-side code — it's constrained by the
-RLS policies above. Never put the `service_role` key in this file or in
-any client-side code.
-
-### 5. Test locally
-Any static server works, e.g.:
+### 2. Test locally
 
 ```bash
 npx serve .
 ```
 
-Visit the form at `/` and the dashboard at `/admin`.
+Form at `/`, dashboard at `/admin`.
 
-## Deployment
+### 3. Deploy — as its own separate project
 
-Push this folder to GitHub and deploy on Vercel/Netlify as a **static
-site** (no framework preset needed — there's no build command). Or drag
-the folder straight into Netlify's manual deploy. `supabase-config.js` can
-ship as-is since it only contains the public anon key.
+Push this folder to its **own GitHub repo** (separate from the Clysto
+inquiries repo), then:
 
-## Notes on what changed from the previous session
+- **Vercel**: Import the repo → Framework Preset: **Other** → leave
+  Build Command / Output Directory blank → Deploy.
+- **Netlify**: same idea — no framework, no build command.
 
-- The earlier session had scaffolded a full Next.js + Prisma-style project
-  (package.json, tsconfig, next.config.ts) but no actual source files
-  (`src/app/page.tsx`, admin pages, `lib/supabase.ts`, etc.) were ever
-  created — only config and docs existed.
-- The real, working asset was a single static HTML file using FormSubmit.
-- Given that, this rebuild skips the Next.js layer entirely: same result
-  (Supabase-backed form + full admin dashboard), far less surface area to
-  maintain or host, and it deploys anywhere without a build step.
-- If you'd genuinely prefer a Next.js/React version later (e.g. for
-  server-side rendering, a bigger app around this), the current
-  `inquiries` table and RLS policies carry over unchanged — only the
-  frontend would need porting.
+You'll get an independent URL (e.g. `student-founders.vercel.app`, or
+point a subdomain like `founders.clysto.net` at it later).
 
-## Future extensions
+## Notes
 
-The schema already has `assigned_to`, `notes`, and `tags` columns ready
-for team assignment, internal notes, and tagging when you want them —
-no migration needed to start using them from the dashboard.
+- Design language, fonts, colors, buttons, cards, and animations were
+  copied directly from the existing Clysto inquiry form — nothing here
+  was redesigned.
+- The `help_needed` field is stored as a comma-separated string (same
+  pattern as `services` in the inquiries table) rather than a separate
+  join table, to keep this dependency-free and simple to query/export.
+- `reviewed_by` is a free-text field, not a dropdown tied to a real
+  admin-users table — fine for a small reviewing team; worth revisiting
+  if you add multiple reviewers with real accounts later.

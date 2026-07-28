@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Student Founders Program — Clysto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./supabase-config.js"></script>
+<style>
+  :root{
+    --ink:#14181A;
+    --ink-soft:#5B6662;
+    --ink-faint:#8A9490;
+    --bg:#F9F8F3;
+    --primary:#00917D;
+    --primary-dark:#007A68;
+    --primary-wash:rgba(0,145,125,0.06);
+    --border:rgba(20,24,26,0.08);
+    --card:rgba(255,255,255,0.6);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+
+  #formSection{position:relative;padding:60px 24px;}
+  .blobs{position:absolute;inset:0;overflow:hidden;z-index:-1;pointer-events:none;}
+  .blob{position:absolute;border-radius:50%;background:var(--primary);filter:blur(70px);opacity:.14;}
+  .blob1{width:480px;height:480px;left:-160px;top:-120px;animation:float1 22s ease-in-out infinite;}
+  .blob2{width:420px;height:420px;right:-140px;top:220px;opacity:.10;animation:float2 26s ease-in-out infinite;}
+  @keyframes float1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(50px,40px) scale(1.08);}}
+  @keyframes float2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-40px,-30px) scale(0.94);}}
+
+  .card{
+    max-width:640px;margin:0 auto;
+    background:var(--card);backdrop-filter:blur(16px);
+    border:1px solid rgba(20,24,26,0.06);
+    border-radius:24px;
+    padding:36px 32px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.05);
+  }
+  @media (max-width:640px){.card{padding:24px 20px;}}
+
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);margin:0 0 8px;}
+
+  /* progress */
+  .progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .steps-track{display:flex;align-items:center;gap:0;flex-wrap:wrap;}
+  .step-dot{
+    width:24px;height:24px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10.5px;border:1px solid var(--border);background:rgba(255,255,255,0.5);color:var(--ink-faint);
+    transition:all .25s;flex-shrink:0;
+  }
+  .step-dot.current{border-color:var(--primary);color:var(--primary);background:#fff;}
+  .step-dot.done{border-color:var(--primary);background:var(--primary);color:#fff;}
+  .step-line{width:14px;height:1px;background:var(--border);margin:0 3px;transition:background .25s;}
+  .step-line.done{background:var(--primary);}
+  .pct{font-size:12px;font-weight:500;color:var(--ink-faint);}
+  .bar-track{height:4px;width:100%;background:rgba(0,0,0,0.06);border-radius:99px;overflow:hidden;margin-top:12px;}
+  .bar-fill{height:100%;background:var(--primary);border-radius:99px;transition:width .4s ease;}
+  .step-caption{margin:8px 0 0;font-size:12px;color:var(--ink-faint);}
+
+  /* step content */
+  .step-panel{display:none;animation:stepIn .3s ease;}
+  .step-panel.active{display:block;}
+  @keyframes stepIn{from{opacity:0;transform:translateX(14px);}to{opacity:1;transform:translateX(0);}}
+
+  .s-title{font-size:1.3rem;font-weight:500;letter-spacing:-0.01em;margin:0 0 4px;}
+  .s-sub{font-size:13.5px;color:var(--ink-faint);margin:0 0 26px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:560px){.grid2{grid-template-columns:1fr;}}
+  .field label{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;font-weight:500;margin-bottom:7px;
+  }
+  .req{color:var(--primary);margin-left:2px;}
+  .opt-hint{font-size:11px;color:var(--ink-faint);font-weight:400;}
+  input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],textarea,select{
+    width:100%;font-family:inherit;font-size:14px;color:var(--ink);
+    background:rgba(255,255,255,0.7);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;outline:none;
+    transition:border-color .2s,box-shadow .2s,background .2s;
+    appearance:none;
+  }
+  select{
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%235B6662" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>');
+    background-repeat:no-repeat;background-position:right 12px center;background-size:14px;padding-right:36px;
+    cursor:pointer;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(0,145,125,0.15);}
+  input.error,textarea.error,select.error{border-color:#f87171;}
+  .err-msg{font-size:12px;color:#ef4444;margin-top:5px;}
+  textarea{resize:vertical;min-height:110px;}
+  textarea.tall{min-height:150px;}
+
+  .vspace > * + *{margin-top:20px;}
+
+  /* checkbox cards (help needed) */
+  .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (min-width:560px){.svc-grid{grid-template-columns:1fr 1fr 1fr;}}
+  .svc-card{
+    display:flex;align-items:flex-start;gap:8px;text-align:left;
+    border:1px solid var(--border);background:rgba(255,255,255,0.6);
+    border-radius:12px;padding:12px 13px;font-size:13px;line-height:1.35;color:var(--ink-soft);
+    cursor:pointer;font-family:inherit;transition:all .2s;
+  }
+  .svc-card:hover{border-color:rgba(0,145,125,0.35);background:#fff;}
+  .svc-card.active{border-color:var(--primary);background:var(--primary-wash);color:#0E5A4C;}
+  .chk{
+    width:16px;height:16px;border-radius:5px;border:1px solid rgba(0,0,0,0.2);
+    background:#fff;flex-shrink:0;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;transition:all .2s;
+  }
+  .svc-card.active .chk{background:var(--primary);border-color:var(--primary);}
+  .chk svg{display:none;width:10px;height:10px;color:#fff;}
+  .svc-card.active .chk svg{display:block;}
+
+  /* plain confirm checkbox row */
+  .confirm-row{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--ink-soft);cursor:pointer;line-height:1.45;}
+  .confirm-row .chk{margin-top:2px;}
+
+  .link-hint{font-size:12px;color:var(--ink-faint);margin:-4px 0 4px;}
+
+  /* nav buttons */
+  .form-nav{display:flex;align-items:center;justify-content:space-between;margin-top:34px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--primary);color:#fff;border:none;cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:500;
+    padding:13px 26px;border-radius:999px;
+    box-shadow:0 8px 20px rgba(0,145,125,0.25);
+    transition:background .2s,transform .15s,box-shadow .2s;
+    text-decoration:none;
+  }
+  .btn:hover{background:var(--primary-dark);box-shadow:0 10px 24px rgba(0,145,125,0.3);}
+  .btn:active{transform:scale(0.98);}
+  .btn:disabled{opacity:.65;cursor:not-allowed;}
+  .btn-ghost{background:rgba(255,255,255,0.7);color:var(--ink);border:1px solid var(--border);box-shadow:none;}
+  .btn-ghost:hover{background:#fff;}
+  .btn-back{
+    background:none;border:none;color:var(--ink-soft);font-family:inherit;
+    font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;
+    padding:10px 14px;border-radius:999px;transition:background .2s,color .2s;
+  }
+  .btn-back:hover{background:rgba(0,0,0,0.04);}
+  .btn-back:disabled{color:#C3CAC7;cursor:not-allowed;}
+  .btn-back:disabled:hover{background:none;}
+  .submit-err{text-align:center;font-size:12px;color:#ef4444;margin-top:12px;}
+
+  .spinner{
+    width:14px;height:14px;border-radius:50%;
+    border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* success */
+  #successPanel{display:none;text-align:center;padding:24px 4px;}
+  .check-circle{
+    width:64px;height:64px;border-radius:50%;background:var(--primary);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 20px;
+    animation:pop .4s cubic-bezier(.34,1.56,.64,1) .1s both;
+  }
+  @keyframes pop{from{transform:scale(0);}to{transform:scale(1);}}
+  #successPanel h3{font-size:1.4rem;font-weight:500;letter-spacing:-0.01em;margin:0;}
+  #successPanel p{max-width:360px;margin:10px auto 0;color:var(--ink-soft);font-size:14px;line-height:1.6;}
+  .success-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:26px;}
+</style>
+</head>
+<body>
+
+<section id="formSection">
+  <div class="blobs"><div class="blob blob1"></div><div class="blob blob2"></div></div>
+  <div class="card">
+
+    <div id="formIntro">
+      <p class="eyebrow">Clysto Student Founders</p>
+    </div>
+
+    <div id="stepFlow">
+
+    <div id="progressWrap">
+      <div class="progress-top">
+        <div class="steps-track" id="stepsTrack"></div>
+        <span class="pct" id="pctLabel">17%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barFill" style="width:17%"></div></div>
+      <p class="step-caption" id="stepCaption">step 1 of 6 — personal info</p>
+    </div>
+
+    <form id="applicationForm" novalidate>
+
+      <!-- STEP 1: Personal Information -->
+      <div class="step-panel active" data-step="0">
+        <h2 class="s-title">let&rsquo;s start with you.</h2>
+        <p class="s-sub">Tell us who you are and where you&rsquo;re studying.</p>
+        <div class="grid2">
+          <div class="field">
+            <label>Full Name<span class="req">*</span></label>
+            <input type="text" id="name" placeholder="Jordan Smith">
+            <div class="err-msg" id="err-name"></div>
+          </div>
+          <div class="field">
+            <label>Age<span class="req">*</span></label>
+            <input type="number" id="age" min="13" max="100" placeholder="20">
+            <div class="err-msg" id="err-age"></div>
+          </div>
+          <div class="field">
+            <label>School / College Name<span class="req">*</span></label>
+            <input type="text" id="institution" placeholder="SRM Institute of Science and Technology">
+            <div class="err-msg" id="err-institution"></div>
+          </div>
+          <div class="field">
+            <label>Grade / Year <span class="opt-hint">optional</span></label>
+            <input type="text" id="gradeYear" placeholder="2nd Year">
+          </div>
+          <div class="field">
+            <label>Course <span class="opt-hint">optional</span></label>
+            <input type="text" id="course" placeholder="B.Tech CSE">
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: About You -->
+      <div class="step-panel" data-step="1">
+        <h2 class="s-title">tell us about yourself.</h2>
+        <p class="s-sub">Briefly introduce yourself, your interests, achievements, and what motivates you to build.</p>
+        <div class="field">
+          <label>About You <span class="opt-hint">optional</span></label>
+          <textarea id="about" class="tall" placeholder="Briefly introduce yourself, your interests, achievements, and what motivates you to build."></textarea>
+        </div>
+      </div>
+
+      <!-- STEP 3: Your Startup -->
+      <div class="step-panel" data-step="2">
+        <h2 class="s-title">tell us about your startup.</h2>
+        <p class="s-sub">Even an early idea counts — walk us through it.</p>
+        <div class="vspace">
+          <div class="field">
+            <label>Startup Name <span class="opt-hint">optional</span></label>
+            <input type="text" id="startupName" placeholder="Acme Labs">
+          </div>
+          <div class="field">
+            <label>Current Stage <span class="opt-hint">optional</span></label>
+            <select id="startupStage">
+              <option value="">Select a stage…</option>
+              <option>Idea</option>
+              <option>Prototype</option>
+              <option>MVP</option>
+              <option>Early Users</option>
+              <option>Revenue</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Explain your startup in detail <span class="opt-hint">optional</span></label>
+            <textarea id="idea" class="tall" placeholder="What problem are you solving? Who is your target audience? Why does this matter? How does your solution work? What is your long-term vision?"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Help Required -->
+      <div class="step-panel" data-step="3">
+        <h2 class="s-title">what do you need help with?</h2>
+        <p class="s-sub">Select everything relevant — you can pick more than one.</p>
+        <div class="svc-grid" id="helpGrid"></div>
+      </div>
+
+      <!-- STEP 5: Product Links -->
+      <div class="step-panel" data-step="4">
+        <h2 class="s-title">show us what you&rsquo;ve built.</h2>
+        <p class="s-sub">Share at least one link — whatever best represents your progress so far.</p>
+        <div class="vspace">
+          <div class="grid2">
+            <div class="field">
+              <label>Website <span class="opt-hint">optional</span></label>
+              <input type="text" id="website" placeholder="acme.com">
+            </div>
+            <div class="field">
+              <label>App Link <span class="opt-hint">optional</span></label>
+              <input type="text" id="appLink" placeholder="apps.apple.com/…">
+            </div>
+            <div class="field">
+              <label>GitHub <span class="opt-hint">optional</span></label>
+              <input type="text" id="github" placeholder="github.com/acme">
+            </div>
+            <div class="field">
+              <label>Figma <span class="opt-hint">optional</span></label>
+              <input type="text" id="figma" placeholder="figma.com/file/…">
+            </div>
+            <div class="field">
+              <label>Demo Video <span class="opt-hint">optional</span></label>
+              <input type="text" id="demoVideo" placeholder="youtube.com/…">
+            </div>
+            <div class="field">
+              <label>LinkedIn <span class="opt-hint">optional</span></label>
+              <input type="text" id="linkedin" placeholder="linkedin.com/in/…">
+            </div>
+          </div>
+          <div class="err-msg" id="err-links" style="display:none;">Please share at least one link before continuing.</div>
+        </div>
+      </div>
+
+      <!-- STEP 6: Why Select You -->
+      <div class="step-panel" data-step="5">
+        <h2 class="s-title">why should we select you?</h2>
+        <p class="s-sub">Tell us why you deserve a place in this founders program.</p>
+        <div class="vspace">
+          <div class="field">
+            <label>Why Select Me <span class="opt-hint">optional</span></label>
+            <textarea id="whySelect" class="tall" placeholder="Tell us why you deserve a place in this founders program."></textarea>
+          </div>
+          <label class="confirm-row" id="confirmRow">
+            <span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span>I confirm all information submitted is accurate.</span>
+          </label>
+          <div class="err-msg" id="err-confirm"></div>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <button type="button" class="btn-back" id="backBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          Back
+        </button>
+        <button type="button" class="btn" id="nextBtn">
+          Continue
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <button type="submit" class="btn" id="submitBtn" style="display:none;">
+          <span id="submitLabel">Submit Application</span>
+          <svg id="submitArrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <p class="submit-err" id="submitErr" style="display:none;">Something went wrong submitting your application. Please try again.</p>
+    </form>
+
+    </div><!-- /stepFlow -->
+
+    <!-- success screen -->
+    <div id="successPanel">
+      <div class="check-circle">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h3>application submitted.</h3>
+      <p>Thanks for applying to the Clysto Student Founders Program. We review applications on a rolling basis and will reach out if there's a fit.</p>
+      <div class="success-actions">
+        <a class="btn btn-ghost" href="https://clysto.net">Back to clysto.net</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+/* ============================================================
+   Supabase
+   ============================================================ */
+const supabaseClient = window.SUPABASE_CONFIG
+  ? supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey)
+  : null;
+
+/* ============================================================
+   Option lists
+   ============================================================ */
+const HELP_OPTIONS = ["Mentorship","Technical Guidance","Product Strategy","Marketing","Funding","Hiring","Networking","Legal","Other"];
+const STEP_LABELS = ["personal info","about you","your startup","help needed","product links","why you"];
+const TOTAL_STEPS = STEP_LABELS.length;
+const STORAGE_KEY = "clysto-sfp-draft-v1";
+
+/* ============================================================
+   State
+   ============================================================ */
+let step = 0;
+let state = {
+  name:"", age:"", institution:"", gradeYear:"", course:"",
+  about:"",
+  startupName:"", startupStage:"", idea:"",
+  helpNeeded:[],
+  website:"", appLink:"", github:"", figma:"", demoVideo:"", linkedin:"",
+  whySelect:"", confirmed:false
+};
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(html !== undefined) e.innerHTML = html;
+  return e;
+}
+function isValidUrl(v){
+  if(!v) return true;
+  try{ new URL(v.startsWith("http") ? v : "https://" + v); return true; }
+  catch(e){ return false; }
+}
+
+/* ============================================================
+   Build dynamic option UI
+   ============================================================ */
+function buildHelpGrid(){
+  const c = document.getElementById("helpGrid");
+  c.innerHTML = "";
+  HELP_OPTIONS.forEach(opt=>{
+    const active = state.helpNeeded.includes(opt);
+    const b = el("button", "svc-card" + (active ? " active" : ""));
+    b.type = "button";
+    b.innerHTML = '<span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span>' + opt + '</span>';
+    b.addEventListener("click", ()=>{
+      const i = state.helpNeeded.indexOf(opt);
+      if(i > -1) state.helpNeeded.splice(i,1); else state.helpNeeded.push(opt);
+      buildHelpGrid();
+      saveDraft();
+    });
+    c.appendChild(b);
+  });
+}
+
+function renderConfirmRow(){
+  const row = document.getElementById("confirmRow");
+  row.classList.toggle("active", state.confirmed);
+  const chk = row.querySelector(".chk");
+  if(state.confirmed){ chk.style.background = "var(--primary)"; chk.style.borderColor = "var(--primary)"; chk.querySelector("svg").style.display = "block"; }
+  else{ chk.style.background = "#fff"; chk.style.borderColor = "rgba(0,0,0,0.2)"; chk.querySelector("svg").style.display = "none"; }
+}
+document.getElementById("confirmRow").addEventListener("click", ()=>{
+  state.confirmed = !state.confirmed;
+  renderConfirmRow();
+  saveDraft();
+});
+
+/* ============================================================
+   Progress bar / step tracker
+   ============================================================ */
+function renderProgress(){
+  const track = document.getElementById("stepsTrack");
+  track.innerHTML = "";
+  STEP_LABELS.forEach((label, i)=>{
+    const dot = el("div", "step-dot" + (i < step ? " done" : i === step ? " current" : ""));
+    dot.innerHTML = i < step
+      ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>'
+      : (i+1);
+    track.appendChild(dot);
+    if(i < STEP_LABELS.length - 1){
+      track.appendChild(el("div", "step-line" + (i < step ? " done" : "")));
+    }
+  });
+  const pct = Math.round(((step+1) / TOTAL_STEPS) * 100);
+  document.getElementById("pctLabel").textContent = pct + "%";
+  document.getElementById("barFill").style.width = pct + "%";
+  document.getElementById("stepCaption").textContent = "step " + (step+1) + " of " + TOTAL_STEPS + " — " + STEP_LABELS[step];
+}
+
+function renderStepPanels(){
+  document.querySelectorAll(".step-panel").forEach(p=>{
+    p.classList.toggle("active", Number(p.dataset.step) === step);
+  });
+  document.getElementById("backBtn").disabled = step === 0;
+  document.getElementById("nextBtn").style.display = step === TOTAL_STEPS - 1 ? "none" : "inline-flex";
+  document.getElementById("submitBtn").style.display = step === TOTAL_STEPS - 1 ? "inline-flex" : "none";
+}
+
+/* ============================================================
+   Validation
+   ============================================================ */
+function clearErrors(){
+  ["name","age","institution"].forEach(k=>{
+    const msg = document.getElementById("err-" + k);
+    if(msg) msg.textContent = "";
+    const input = document.getElementById(k);
+    if(input) input.classList.remove("error");
+  });
+  document.getElementById("err-links").style.display = "none";
+  document.getElementById("err-confirm").textContent = "";
+}
+function setError(key, msg){
+  document.getElementById("err-" + key).textContent = msg;
+  const input = document.getElementById(key);
+  if(input) input.classList.add("error");
+}
+function validateStep(s){
+  clearErrors();
+  let ok = true;
+  if(s === 0){
+    if(!state.name.trim()){ setError("name","Full name is required."); ok = false; }
+    if(!state.age){ setError("age","Age is required."); ok = false; }
+    if(!state.institution.trim()){ setError("institution","School / college name is required."); ok = false; }
+  }
+  if(s === 4){
+    const links = [state.website, state.appLink, state.github, state.figma, state.demoVideo, state.linkedin];
+    const hasLink = links.some(v => v && v.trim());
+    if(!hasLink){
+      document.getElementById("err-links").style.display = "block";
+      ok = false;
+    }
+  }
+  if(s === 5){
+    if(!state.confirmed){
+      document.getElementById("err-confirm").textContent = "Please confirm your information is accurate before submitting.";
+      ok = false;
+    }
+  }
+  return ok;
+}
+
+/* ============================================================
+   Autosave to localStorage
+   ============================================================ */
+function saveDraft(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, step })); }catch(e){}
+}
+function loadDraft(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(parsed.state) state = Object.assign(state, parsed.state);
+    if(typeof parsed.step === "number") step = parsed.step;
+  }catch(e){}
+}
+
+/* ============================================================
+   Bind plain text inputs
+   ============================================================ */
+const TEXT_FIELDS = ["name","age","institution","gradeYear","course","about",
+  "startupName","idea","website","appLink","github","figma","demoVideo","linkedin","whySelect"];
+const idMap = { gradeYear:"gradeYear", appLink:"appLink", demoVideo:"demoVideo" };
+
+function bindTextFields(){
+  TEXT_FIELDS.forEach(key=>{
+    const input = document.getElementById(key);
+    if(!input) return;
+    input.value = state[key] || "";
+    input.addEventListener("input", ()=>{
+      state[key] = input.value;
+      saveDraft();
+    });
+  });
+  const stageSel = document.getElementById("startupStage");
+  stageSel.value = state.startupStage || "";
+  stageSel.addEventListener("change", ()=>{
+    state.startupStage = stageSel.value;
+    saveDraft();
+  });
+}
+
+/* ============================================================
+   Navigation
+   ============================================================ */
+function goToStep(target){
+  step = Math.max(0, Math.min(target, TOTAL_STEPS - 1));
+  renderProgress();
+  renderStepPanels();
+  document.getElementById("formSection").scrollIntoView({behavior:"smooth", block:"start"});
+  saveDraft();
+}
+document.getElementById("nextBtn").addEventListener("click", ()=>{
+  if(!validateStep(step)) return;
+  goToStep(step + 1);
+});
+document.getElementById("backBtn").addEventListener("click", ()=>{
+  goToStep(step - 1);
+});
+
+/* ============================================================
+   Submit
+   ============================================================ */
+document.getElementById("applicationForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if(!validateStep(0)){ goToStep(0); return; }
+  if(!validateStep(4)){ goToStep(4); return; }
+  if(!validateStep(5)) return;
+
+  const submitBtn = document.getElementById("submitBtn");
+  const submitLabel = document.getElementById("submitLabel");
+  const submitArrow = document.getElementById("submitArrow");
+  const submitErr = document.getElementById("submitErr");
+
+  submitBtn.disabled = true;
+  submitArrow.style.display = "none";
+  submitLabel.textContent = "Submitting…";
+  const spinner = el("span", "spinner");
+  submitBtn.insertBefore(spinner, submitLabel);
+  submitErr.style.display = "none";
+
+  const payload = {
+    name: state.name,
+    age: state.age,
+    institution: state.institution,
+    grade_year: state.gradeYear || null,
+    course: state.course || null,
+    about: state.about || null,
+    startup_name: state.startupName || null,
+    startup_stage: state.startupStage || null,
+    idea: state.idea || null,
+    help_needed: state.helpNeeded.length > 0 ? state.helpNeeded.join(", ") : null,
+    website: state.website || null,
+    app_link: state.appLink || null,
+    github: state.github || null,
+    figma: state.figma || null,
+    demo_video: state.demoVideo || null,
+    linkedin: state.linkedin || null,
+    why_select: state.whySelect || null
+  };
+
+  try{
+    if(!supabaseClient) throw new Error("Supabase is not configured (missing supabase-config.js)");
+    const { error } = await supabaseClient.from("student_founders_applications").insert([payload]);
+    if(error) throw error;
+
+    document.getElementById("stepFlow").style.display = "none";
+    document.getElementById("successPanel").style.display = "block";
+    localStorage.removeItem(STORAGE_KEY);
+  }catch(err){
+    console.error("[application submit]", err);
+    submitErr.style.display = "block";
+    submitBtn.disabled = false;
+    spinner.remove();
+    submitArrow.style.display = "inline";
+    submitLabel.textContent = "Submit Application";
+  }
+});
+
+/* ============================================================
+   Init
+   ============================================================ */
+loadDraft();
+buildHelpGrid();
+renderConfirmRow();
+bindTextFields();
+renderProgress();
+renderStepPanels();
+</script>
+</body>
+</html>
